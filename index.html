@@ -158,9 +158,12 @@
   .cov-opt .cov-r{text-align:right;white-space:nowrap}
   .cov-opt .cov-r b{font-family:'Barlow Condensed';font-size:22px;font-weight:800;color:var(--orange)}
   .cov-opt .cov-r small{display:block;font-size:11px;color:var(--muted)}
-  .cov-total{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px dashed var(--line);margin-top:4px}
-  .cov-total span{font-size:13px;color:var(--muted)}
-  .cov-total b{font-family:'Barlow Condensed';font-size:26px;font-weight:800;color:var(--text)}
+  .cov-total{padding:10px 14px 4px;border-top:1px dashed var(--line);margin-top:4px}
+  .cov-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--muted)}
+  .cov-row span:last-child{color:var(--text)}
+  .cov-grand{padding-top:8px;margin-top:4px;border-top:1px solid var(--line)}
+  .cov-grand span:first-child{color:var(--text);font-size:14px}
+  .cov-grand b{font-family:'Barlow Condensed';font-size:26px;font-weight:800;color:var(--orange)}
   .ratebox.hide{display:none}
   .ratebox b{font-family:'Barlow Condensed';font-size:32px;font-weight:800;color:var(--orange)}
   .ratebox small{color:var(--muted);font-size:12px}
@@ -312,7 +315,11 @@
       <div class="coverage" id="coverageBox">
         <div class="cov-head">Add damage protection <span>(optional)</span></div>
         <div id="covOpts"></div>
-        <div class="cov-total"><span>Estimated daily total</span><b id="covTotal">—</b></div>
+        <div class="cov-total" id="covBreakdown">
+          <div class="cov-row"><span>Subtotal / day</span><span id="covSub">—</span></div>
+          <div class="cov-row"><span>HST (13%)</span><span id="covHst">—</span></div>
+          <div class="cov-row cov-grand"><span>Daily total</span><b id="covTotal">—</b></div>
+        </div>
       </div>
 
       <div class="insnote" id="insnote">
@@ -470,7 +477,11 @@ function renderCoverage(){
 }
 function updateCovTotal(){
   const base=current?current.rate:0;
-  document.getElementById('covTotal').textContent='$'+(base+covObj().rate).toFixed(2);
+  const sub=base+covObj().rate;
+  const hst=sub*0.13;
+  document.getElementById('covSub').textContent='$'+sub.toFixed(2);
+  document.getElementById('covHst').textContent='$'+hst.toFixed(2);
+  document.getElementById('covTotal').textContent='$'+(sub+hst).toFixed(2);
 }
 
 function openBooking(vehicle=null, startMode='retail'){
@@ -525,7 +536,12 @@ async function submitBooking(){
     const c=covObj();
     rows.push(['Coverage', c.label + (c.ded ? (' — $'+c.ded+' deductible') : '')]);
     if(c.rate) rows.push(['Coverage rate','$'+c.rate.toFixed(2)+'/day']);
-    if(current) rows.push(['Est. daily total','$'+(current.rate+c.rate).toFixed(2)+' CAD']);
+    if(current){
+      const sub=current.rate+c.rate, hst=sub*0.13;
+      rows.push(['Subtotal / day','$'+sub.toFixed(2)]);
+      rows.push(['HST (13%)','$'+hst.toFixed(2)]);
+      rows.push(['Daily total','$'+(sub+hst).toFixed(2)+' CAD']);
+    }
   }
   if(mode==='insurance'){
     rows.push(['Insurer', g('f-insco')], ['Claim #', g('f-claim')], ['Adjuster', g('f-adj')||'—'], ['Adjuster phone', g('f-adjphone')||'—']);
