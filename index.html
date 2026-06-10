@@ -101,6 +101,15 @@
   .btn-out{background:#2a2a33;color:#8a8a94;cursor:not-allowed;border:1px solid var(--line)}
   .card .body{padding:18px 18px 20px;flex:1;display:flex;flex-direction:column}
   .card h3{font-size:23px;font-weight:700;text-transform:uppercase;font-style:italic}
+  .card h3 .sim{display:block;font-family:'Inter';font-size:11.5px;font-style:normal;font-weight:500;letter-spacing:1.5px;color:var(--muted);margin-top:3px}
+
+  /* ===== GOOD TO KNOW / POLICY ===== */
+  .know{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+  .know .k{background:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden}
+  .know .k::before{content:"";position:absolute;top:0;left:0;width:46px;height:3px;background:var(--orange)}
+  .know .k h4{font-family:'Barlow Condensed';font-size:20px;font-weight:700;font-style:italic;text-transform:uppercase;margin-bottom:8px}
+  .know .k p{font-size:14px;color:#c9c9c6;line-height:1.6}
+  .know .k b{color:var(--orange)}
   .card .specs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
   .card .specs span{font-size:12.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);padding:4px 9px;border-radius:7px}
   .card .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -198,8 +207,8 @@
 
 <!-- TOP BAR -->
 <div class="topbar"><div class="wrap">
-  <span class="addr">11 Belfield Rd, Toronto, ON M9W 1E8 · near Pearson Airport</span>
-  <span class="phone">📞 (416) 241-7656</span>
+  <span class="addr">11 Belfield Rd, Toronto, ON M9W 1E8 · near Pearson Airport · Mon–Fri 10am–7pm</span>
+  <a class="phone" href="tel:+14162417656">📞 (416) 241-7656</a>
 </div></div>
 
 <!-- HEADER -->
@@ -208,6 +217,7 @@
   <nav class="main">
     <a href="#fleet">Our Fleet</a>
     <a href="#how">How It Works</a>
+    <a href="#goodtoknow">Rental Info</a>
     <a href="#insurance">Insurance Replacement</a>
     <a href="#contact">Contact</a>
   </nav>
@@ -272,6 +282,33 @@
   </div>
 </div></section>
 
+<!-- GOOD TO KNOW / RENTAL POLICY -->
+<section class="block" id="goodtoknow"><div class="wrap">
+  <div class="sec-head">
+    <div class="kicker">Before You Book</div>
+    <h2>Good To Know</h2>
+    <p>No surprises at the counter — here's exactly how our rentals work.</p>
+  </div>
+  <div class="know">
+    <div class="k">
+      <h4>Kilometres Included</h4>
+      <p>Every rental includes <b>200 km per day</b>, up to <b>3,000 km per month</b>. Driving further? Extra distance is just <b>$0.18/km</b> — no hidden multipliers.</p>
+    </div>
+    <div class="k">
+      <h4>Security Deposit</h4>
+      <p>A <b>$500 deposit</b> is pre-authorized on your credit card at pickup and released in full when the vehicle comes back as it left.</p>
+    </div>
+    <div class="k">
+      <h4>What To Bring</h4>
+      <p>A valid driver's licence, the credit card in your name, and a <b>second piece of photo ID</b>. That's it — you'll be on the road in minutes.</p>
+    </div>
+    <div class="k">
+      <h4>Vehicle Class, Not VIN</h4>
+      <p>Vehicles are reserved by class — you'll get the model shown <b>or a similar one</b> in the same category, always clean and recently serviced.</p>
+    </div>
+  </div>
+</div></section>
+
 <!-- CONTACT -->
 <section class="block" id="contact"><div class="wrap">
   <div class="sec-head"><div class="kicker">Contact</div><h2>Come See Us</h2></div>
@@ -310,6 +347,11 @@
       <div class="ratebox" id="ratebox">
         <div><small>SELECTED VEHICLE</small><div id="rb-name" style="font-weight:600">Any available vehicle</div></div>
         <div style="text-align:right"><b id="rb-rate">—</b><small>per day</small></div>
+      </div>
+
+      <div class="coverage" id="addonBox">
+        <div class="cov-head">Optional extras <span>(tap to add)</span></div>
+        <div id="addonOpts"></div>
       </div>
 
       <div class="coverage" id="coverageBox">
@@ -441,7 +483,7 @@ function renderGrid(){
         <img class="carimg" src="${v.img || 'cars/'+slug(v.name)+'.jpg'}" alt="${v.name}" loading="lazy" onerror="this.remove()">
       </div>
       <div class="body">
-        <h3>${v.name}</h3>
+        <h3>${v.name} <span class="sim">or similar — ${v.cls} class</span></h3>
         <div class="specs"><span>👤 ${v.seats} seats</span><span>⚙ ${v.trans}</span><span>⛽ ${v.fuel}</span></div>
         <div class="foot">
           <div class="rate"><b>$${v.rate}</b><small>CAD / DAY · RETAIL</small></div>
@@ -458,14 +500,41 @@ renderGrid();
 let mode="retail", current=null;
 const overlay=document.getElementById('overlay');
 
-// optional damage-protection tiers (retail only)
+// optional damage-protection tiers (retail only) — lower deductible = higher daily rate
 const COVERAGE=[
-  {id:'none',     label:'No coverage',         rate:0,     ded:null, note:'You cover damage / use your own insurance'},
-  {id:'standard', label:'Standard protection', rate:19.99, ded:2500, note:'$2,500 deductible if claimed'},
-  {id:'premium',  label:'Premium protection',  rate:29.99, ded:1500, note:'$1,500 deductible if claimed'},
+  {id:'none',   label:'No coverage',     rate:0,     ded:null, note:'Use your own insurance — you cover any damage'},
+  {id:'basic',  label:'Basic shield',    rate:15.99, ded:3000, note:'$3,000 deductible if claimed'},
+  {id:'plus',   label:'Plus shield',     rate:19.99, ded:2000, note:'$2,000 deductible if claimed'},
+  {id:'super',  label:'Super shield',    rate:24.99, ded:1500, note:'$1,500 deductible if claimed'},
+  {id:'max',    label:'Max shield',      rate:29.99, ded:1000, note:'$1,000 deductible — lowest risk'},
 ];
 let coverage='none';
 function covObj(){return COVERAGE.find(c=>c.id===coverage);}
+
+// optional extras (retail only) — toggle any combination
+const ADDONS=[
+  {id:'driver',  label:'Additional driver',            rate:12.99, note:'Share the wheel — second licensed driver'},
+  {id:'booster', label:'Child / booster seat',         rate:14.99, note:'Installed and ready at pickup'},
+  {id:'gps',     label:'GPS navigation',               rate:10.99, note:'Dedicated unit, no roaming needed'},
+  {id:'tire',    label:'Tire & windshield waiver',     rate:10.99, note:'Covers chips, cracks and flats'},
+  {id:'young',   label:'Young driver (23–24)',         rate:21.99, note:'Required fee for drivers under 25'},
+  {id:'liab',    label:'Liability coverage',           rate:8.99,  note:'Third-party liability top-up'},
+];
+let addonsSel=new Set();
+function addonsTotal(){let t=0;ADDONS.forEach(a=>{if(addonsSel.has(a.id))t+=a.rate;});return t;}
+function renderAddons(){
+  const box=document.getElementById('addonOpts');
+  box.innerHTML=ADDONS.map(a=>`
+    <div class="cov-opt${addonsSel.has(a.id)?' on':''}" data-id="${a.id}">
+      <div class="cov-l"><b>${a.label}</b><small>${a.note}</small></div>
+      <div class="cov-r"><b>$${a.rate.toFixed(2)}</b><small>per day</small></div>
+    </div>`).join('');
+  [...box.children].forEach(el=>el.onclick=()=>{
+    const id=el.dataset.id;
+    addonsSel.has(id)?addonsSel.delete(id):addonsSel.add(id);
+    renderAddons();updateCovTotal();
+  });
+}
 function renderCoverage(){
   const box=document.getElementById('covOpts');
   box.innerHTML=COVERAGE.map(c=>`
@@ -477,7 +546,7 @@ function renderCoverage(){
 }
 function updateCovTotal(){
   const base=current?current.rate:0;
-  const sub=base+covObj().rate;
+  const sub=base+covObj().rate+addonsTotal();
   const hst=sub*0.13;
   document.getElementById('covSub').textContent='$'+sub.toFixed(2);
   document.getElementById('covHst').textContent='$'+hst.toFixed(2);
@@ -488,9 +557,9 @@ function openBooking(vehicle=null, startMode='retail'){
   current=vehicle;
   // rebuild body in case a previous confirmation replaced it
   if(!document.getElementById('seg-retail')) location.reload();
-  document.getElementById('rb-name').textContent = vehicle ? vehicle.name : "Any available vehicle";
+  document.getElementById('rb-name').textContent = vehicle ? vehicle.name + " or similar" : "Any available vehicle";
   document.getElementById('rb-rate').textContent = vehicle ? "$"+vehicle.rate : "—";
-  coverage='none'; renderCoverage(); updateCovTotal();
+  coverage='none'; addonsSel=new Set(); renderCoverage(); renderAddons(); updateCovTotal();
   setMode(startMode);
   overlay.classList.add('open');
 }
@@ -502,16 +571,17 @@ function setMode(m){
   const r=document.getElementById('seg-retail'), i=document.getElementById('seg-ins');
   const rate=document.getElementById('ratebox'), note=document.getElementById('insnote'), ins=document.getElementById('insFields');
   const cov=document.getElementById('coverageBox');
+  const add=document.getElementById('addonBox');
   const title=document.getElementById('m-title'), btn=document.getElementById('submitBtn');
   if(m==='retail'){
     r.classList.add('on','retail-on'); i.classList.remove('on','ins-on');
     rate.classList.remove('hide'); note.classList.remove('show'); ins.classList.remove('show');
-    cov.style.display='';
+    cov.style.display=''; add.style.display='';
     title.textContent="Retail Reservation"; btn.className="btn btn-orange submit"; btn.style.background="";btn.style.color="";
   }else{
     i.classList.add('on','ins-on'); r.classList.remove('on','retail-on');
     rate.classList.add('hide'); note.classList.add('show'); ins.classList.add('show');
-    cov.style.display='none';
+    cov.style.display='none'; add.style.display='none';
     title.textContent="Insurance Replacement"; btn.className="btn submit"; btn.style.background="var(--steel)";btn.style.color="#fff";
   }
 }
@@ -536,12 +606,16 @@ async function submitBooking(){
     const c=covObj();
     rows.push(['Coverage', c.label + (c.ded ? (' — $'+c.ded+' deductible') : '')]);
     if(c.rate) rows.push(['Coverage rate','$'+c.rate.toFixed(2)+'/day']);
+    const picked=ADDONS.filter(a=>addonsSel.has(a.id));
+    if(picked.length) rows.push(['Extras', picked.map(a=>a.label+' ($'+a.rate.toFixed(2)+'/day)').join(', ')]);
     if(current){
-      const sub=current.rate+c.rate, hst=sub*0.13;
+      const sub=current.rate+c.rate+addonsTotal(), hst=sub*0.13;
       rows.push(['Subtotal / day','$'+sub.toFixed(2)]);
       rows.push(['HST (13%)','$'+hst.toFixed(2)]);
       rows.push(['Daily total','$'+(sub+hst).toFixed(2)+' CAD']);
     }
+    rows.push(['Includes','200 km/day (3,000 km/mo max), $0.18/km after']);
+    rows.push(['At pickup','$500 deposit pre-auth + 2nd photo ID']);
   }
   if(mode==='insurance'){
     rows.push(['Insurer', g('f-insco')], ['Claim #', g('f-claim')], ['Adjuster', g('f-adj')||'—'], ['Adjuster phone', g('f-adjphone')||'—']);
