@@ -608,8 +608,8 @@ renderGrid();
    The same two values also go at the top of admin.html.
    Until configured, the site quietly uses the built-in fleet above.
    ========================================================================= */
-const SUPABASE_URL = "";      // e.g. "https://abcd1234.supabase.co"
-const SUPABASE_ANON_KEY = ""; // the long "anon public" key
+const SUPABASE_URL = https://ukeymxvqrhxqyyeqwlab.supabase.co "";      // e.g. "https://abcd1234.supabase.co"
+const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrZXlteHZxcmh4cXl5ZXF3bGFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExODIzNjIsImV4cCI6MjA5Njc1ODM2Mn0.4kf4e0CIbU58cf0UzhoVo8yOdYpdYPa_G0BAVwo3ZP4""; // the long "anon public" key
 
 async function sbGet(table){
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=sort.asc`, {
