@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Admin — Optimum Car Rentals</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230e0e11'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' font-style='italic' fill='%23ff7700' text-anchor='middle'>O</text></svg>" />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0e0e11;--surface:#16161a;--line:#26262c;--text:#f2f2ef;--muted:#9a9aa0;--orange:#ff7700;--green:#39d98a;--red:#ff5757;--radius:14px}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--ink);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh}
+  h1,h2{font-family:'Barlow Condensed';font-style:italic;text-transform:uppercase;letter-spacing:.5px}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 18px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);margin-bottom:24px}
+  .brand{font-family:'Barlow Condensed';font-weight:800;font-size:22px;font-style:italic;text-transform:uppercase}
+  .brand span{color:var(--orange)}
+  .btn{font-family:'Barlow Condensed';font-weight:700;font-size:15px;letter-spacing:.6px;text-transform:uppercase;border:0;border-radius:9px;padding:10px 18px;cursor:pointer;transition:.15s}
+  .btn-orange{background:var(--orange);color:#160d04}
+  .btn-ghost{background:none;border:1px solid var(--line);color:var(--text)}
+  .btn-red{background:none;border:1px solid #4a2626;color:var(--red);padding:6px 12px;font-size:13px}
+  .btn-green{background:var(--green);color:#06281a;padding:6px 14px;font-size:13px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:26px}
+  /* login */
+  .login{max-width:380px;margin:10vh auto}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.4px;text-transform:uppercase}
+  input,select{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;color:var(--text);font-family:'Inter';font-size:14px}
+  input:focus,select:focus{outline:none;border-color:var(--orange)}
+  .err{color:var(--red);font-size:13px;margin-top:8px;display:none}
+  /* tables */
+  .sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .sec-head h2{font-size:24px}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  td input,td select{padding:7px 9px;font-size:13.5px}
+  .w-sm{width:64px}.w-md{width:96px}
+  .avail-toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--red)}
+  .dot.on{background:var(--green)}
+  .saving{position:fixed;bottom:18px;right:18px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:13px;display:none}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+  @media(max-width:760px){ .tablewrap{overflow-x:auto} table{min-width:760px} }
+</style>
+</head>
+<body>
+
+<!-- ===== CONFIG — paste the SAME values used in index.html ===== -->
+<script>
+const SUPABASE_URL =https://ukeymxvqrhxqyyeqwlab.supabase.co "";      // e.g. "https://abcd1234.supabase.co"
+const SUPABASE_ANON_KEY =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrZXlteHZxcmh4cXl5ZXF3bGFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExODIzNjIsImV4cCI6MjA5Njc1ODM2Mn0.4kf4e0CIbU58cf0UzhoVo8yOdYpdYPa_G0BAVwo3ZP4 ""; // the long "anon public" key
+</script>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">Optimum <span>Admin</span></div>
+    <button class="btn btn-ghost" id="logoutBtn" style="display:none" onclick="logout()">Log out</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="card login" id="loginCard">
+    <h1 style="font-size:26px;margin-bottom:16px">Owner Login</h1>
+    <div class="field"><label>Email</label><input id="l-email" type="email" autocomplete="username" /></div>
+    <div class="field"><label>Password</label><input id="l-pass" type="password" autocomplete="current-password" /></div>
+    <button class="btn btn-orange" style="width:100%" onclick="login()">Sign In</button>
+    <div class="err" id="loginErr"></div>
+    <p class="note">Create your admin account in Supabase: Authentication → Users → Add user (untick "send invite", set a password). Only that account can make changes.</p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dash" style="display:none">
+
+    <div class="card">
+      <div class="sec-head">
+        <h2>Fleet</h2>
+        <button class="btn btn-orange" onclick="addVehicle()">+ Add Vehicle</button>
+      </div>
+      <div class="tablewrap">
+        <table id="fleetTable">
+          <thead><tr><th>Name</th><th>Class</th><th>Seats</th><th>Trans</th><th>Fuel</th><th>$/Day</th><th>Photo URL</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="note">Class names create the filter buttons on the website automatically — type a new class name to add a new category. Photo URL is optional; cars without one show the built-in illustration. Tap the status dot to flip Available / Sold Out.</p>
+    </div>
+
+    <div class="card">
+      <div class="sec-head">
+        <h2>Optional Extras</h2>
+        <button class="btn btn-orange" onclick="addExtra()">+ Add Extra</button>
+      </div>
+      <div class="tablewrap">
+        <table id="extrasTable">
+          <thead><tr><th>Name</th><th>Description</th><th>$/Day</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-head">
+        <h2>Damage Protection Tiers</h2>
+        <button class="btn btn-orange" onclick="addProtection()">+ Add Tier</button>
+      </div>
+      <div class="tablewrap">
+        <table id="protTable">
+          <thead><tr><th>Name</th><th>Deductible $</th><th>$/Day</th><th>Description</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="note">The website always shows a free "No coverage" option first — you only manage the paid tiers here.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="saving" id="toast">Saved ✓</div>
+
+<script>
+/* ============ helpers ============ */
+let token = sessionStorage.getItem('oc_admin_token') || null;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const hdrs = () => ({ apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Prefer: 'return=representation' });
+
+function toast(msg, bad){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.borderColor = bad ? '#4a2626' : 'var(--line)';
+  t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(()=> t.style.display='none', 2200);
+}
+
+async function api(path, opts={}){
+  const r = await fetch(SUPABASE_URL + path, { ...opts, headers: { ...hdrs(), ...(opts.headers||{}) } });
+  if(r.status === 401){ logout(); throw new Error('Session expired — please log in again.'); }
+  if(!r.ok){ const e = await r.text(); throw new Error(e); }
+  return r.status === 204 ? null : r.json();
+}
+
+/* ============ auth ============ */
+async function login(){
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){ errEl.textContent = 'Setup needed: paste your Supabase URL and key at the top of admin.html.'; errEl.style.display='block'; return; }
+  try{
+    const r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await r.json();
+    if(!r.ok || !data.access_token) throw new Error(data.error_description || data.msg || 'Login failed');
+    token = data.access_token;
+    sessionStorage.setItem('oc_admin_token', token);
+    showDash();
+  }catch(e){ errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+function logout(){
+  token = null; sessionStorage.removeItem('oc_admin_token');
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('loginCard').style.display = 'block';
+}
+
+async function showDash(){
+  document.getElementById('loginCard').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+  document.getElementById('logoutBtn').style.display = 'inline-block';
+  await Promise.all([loadFleet(), loadExtras(), loadProtection()]);
+}
+
+/* ============ fleet ============ */
+async function loadFleet(){
+  const rows = await api('/rest/v1/fleet?select=*&order=sort.asc');
+  const tb = document.querySelector('#fleetTable tbody');
+  tb.innerHTML = rows.map(v => `
+    <tr data-id="${v.id}">
+      <td><input value="${esc(v.name)}" data-f="name" /></td>
+      <td><input value="${esc(v.cls)}" data-f="cls" class="w-md" style="width:130px" /></td>
+      <td><input value="${esc(v.seats)}" data-f="seats" type="number" class="w-sm" /></td>
+      <td><select data-f="trans"><option${v.trans==='Automatic'?' selected':''}>Automatic</option><option${v.trans==='Manual'?' selected':''}>Manual</option></select></td>
+      <td><select data-f="fuel"><option${v.fuel==='Gas'?' selected':''}>Gas</option><option${v.fuel==='Hybrid'?' selected':''}>Hybrid</option><option${v.fuel==='Electric'?' selected':''}>Electric</option><option${v.fuel==='Diesel'?' selected':''}>Diesel</option></select></td>
+      <td><input value="${esc(v.rate)}" data-f="rate" type="number" step="0.01" class="w-sm" /></td>
+      <td><input value="${esc(v.img||'')}" data-f="img" placeholder="optional" style="min-width:120px" /></td>
+      <td><span class="avail-toggle" onclick="toggleAvail(this, ${v.id}, ${v.avail})"><span class="dot ${v.avail?'on':''}"></span>${v.avail?'Available':'Sold out'}</span></td>
+      <td style="white-space:nowrap"><button class="btn btn-green" onclick="saveRow(this,'fleet')">Save</button> <button class="btn btn-red" onclick="delRow(this,'fleet')">✕</button></td>
+    </tr>`).join('');
+}
+
+async function addVehicle(){
+  await api('/rest/v1/fleet', { method:'POST', body: JSON.stringify({ name:'New Vehicle', cls:'Economy', seats:5, trans:'Automatic', fuel:'Gas', rate:50, avail:true, sort:999 }) });
+  toast('Vehicle added'); loadFleet();
+}
+
+async function toggleAvail(el, id, cur){
+  try{
+    await api(`/rest/v1/fleet?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ avail: !cur }) });
+    toast(!cur ? 'Marked available' : 'Marked sold out'); loadFleet();
+  }catch(e){ toast('Error: ' + e.message, true); }
+}
+
+/* ============ extras ============ */
+async function loadExtras(){
+  const rows = await api('/rest/v1/extras?select=*&order=sort.asc');
+  const tb = document.querySelector('#extrasTable tbody');
+  tb.innerHTML = rows.map(a => `
+    <tr data-id="${a.id}">
+      <td><input value="${esc(a.label)}" data-f="label" /></td>
+      <td><input value="${esc(a.note||'')}" data-f="note" /></td>
+      <td><input value="${esc(a.rate)}" data-f="rate" type="number" step="0.01" class="w-md" /></td>
+      <td style="white-space:nowrap"><button class="btn btn-green" onclick="saveRow(this,'extras')">Save</button> <button class="btn btn-red" onclick="delRow(this,'extras')">✕</button></td>
+    </tr>`).join('');
+}
+async function addExtra(){
+  await api('/rest/v1/extras', { method:'POST', body: JSON.stringify({ label:'New extra', note:'', rate:9.99, sort:999 }) });
+  toast('Extra added'); loadExtras();
+}
+
+/* ============ protection ============ */
+async function loadProtection(){
+  const rows = await api('/rest/v1/protection?select=*&order=sort.asc');
+  const tb = document.querySelector('#protTable tbody');
+  tb.innerHTML = rows.map(p => `
+    <tr data-id="${p.id}">
+      <td><input value="${esc(p.label)}" data-f="label" /></td>
+      <td><input value="${esc(p.ded||'')}" data-f="ded" type="number" class="w-md" /></td>
+      <td><input value="${esc(p.rate)}" data-f="rate" type="number" step="0.01" class="w-md" /></td>
+      <td><input value="${esc(p.note||'')}" data-f="note" /></td>
+      <td style="white-space:nowrap"><button class="btn btn-green" onclick="saveRow(this,'protection')">Save</button> <button class="btn btn-red" onclick="delRow(this,'protection')">✕</button></td>
+    </tr>`).join('');
+}
+async function addProtection(){
+  await api('/rest/v1/protection', { method:'POST', body: JSON.stringify({ label:'New tier', ded:2000, rate:19.99, note:'', sort:999 }) });
+  toast('Tier added'); loadProtection();
+}
+
+/* ============ shared save / delete ============ */
+async function saveRow(btn, table){
+  const tr = btn.closest('tr'), id = tr.dataset.id, body = {};
+  tr.querySelectorAll('[data-f]').forEach(inp => {
+    let val = inp.value.trim();
+    if(inp.type === 'number') val = val === '' ? null : Number(val);
+    body[inp.dataset.f] = val === '' ? null : val;
+  });
+  try{
+    await api(`/rest/v1/${table}?id=eq.${id}`, { method:'PATCH', body: JSON.stringify(body) });
+    toast('Saved ✓');
+  }catch(e){ toast('Error: ' + e.message, true); }
+}
+
+async function delRow(btn, table){
+  if(!confirm('Delete this item? This cannot be undone.')) return;
+  const id = btn.closest('tr').dataset.id;
+  try{
+    await api(`/rest/v1/${table}?id=eq.${id}`, { method:'DELETE' });
+    btn.closest('tr').remove(); toast('Deleted');
+  }catch(e){ toast('Error: ' + e.message, true); }
+}
+
+/* auto-login if session token exists */
+if(token) showDash();
+</script>
+</body>
+</html>
