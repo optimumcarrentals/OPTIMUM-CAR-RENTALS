@@ -10,7 +10,7 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://optimumcarrentals.ca" />
 <meta name="theme-color" content="#0e0e11" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.web3forms.com https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self' https://api.web3forms.com" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.web3forms.com https://*.supabase.co; object-src 'none'; frame-src https://www.google.com; base-uri 'self'; form-action 'self' https://api.web3forms.com" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230e0e11'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' font-style='italic' fill='%23ff7700' text-anchor='middle'>O</text></svg>" />
 <script type="application/ld+json">
@@ -278,7 +278,6 @@
   </div>
   <div class="hero-stats">
     <div class="s"><b>8+</b><span>YEARS SERVING THE GTA</span></div>
-    <div class="s"><b>8</b><span>VEHICLE CLASSES</span></div>
     <div class="s"><b>24/7</b><span>ROADSIDE SUPPORT</span></div>
   </div>
 </div></section>
@@ -601,15 +600,15 @@ function renderGrid(){
 renderGrid();
 
 /* =========================================================================
-  LIVE FLEET DATA (Supabase admin backend)
+   LIVE FLEET DATA (Supabase admin backend)
    1. Create a free project at https://supabase.com
    2. Run supabase-setup.sql in the SQL editor
    3. Paste your Project URL and anon public key below (Settings → API)
    The same two values also go at the top of admin.html.
    Until configured, the site quietly uses the built-in fleet above.
    ========================================================================= */
-const SUPABASE_URL =https://rauodvvxrjpmzwocaxqc.supabase.co"";      // e.g. "https://abcd1234.supabase.co"
-const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhdW9kdnZ4cmpwbXp3b2NheHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExOTAxODgsImV4cCI6MjA5Njc2NjE4OH0.0UMVqEg4cL8UyPWtMOOva7HwNUIZTAZXTDzOijGCI3I""; // the long "anon public" key
+const SUPABASE_URL = "https://rauodvvxrjpmzwocaxqc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhdW9kdnZ4cmpwbXp3b2NheHFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExOTAxODgsImV4cCI6MjA5Njc2NjE4OH0.0UMVqEg4cL8UyPWtMOOva7HwNUIZTAZXTDzOijGCI3I";
 
 async function sbGet(table){
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=sort.asc`, {
