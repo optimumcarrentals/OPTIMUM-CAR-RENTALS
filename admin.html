@@ -185,7 +185,7 @@ async function loadFleet(){
       <td><select data-f="trans"><option${v.trans==='Automatic'?' selected':''}>Automatic</option><option${v.trans==='Manual'?' selected':''}>Manual</option></select></td>
       <td><select data-f="fuel"><option${v.fuel==='Gas'?' selected':''}>Gas</option><option${v.fuel==='Hybrid'?' selected':''}>Hybrid</option><option${v.fuel==='Electric'?' selected':''}>Electric</option><option${v.fuel==='Diesel'?' selected':''}>Diesel</option></select></td>
       <td><input value="${esc(v.rate)}" data-f="rate" type="number" step="0.01" class="w-sm" /></td>
-      <td><input value="${esc(v.img||'')}" data-f="img" placeholder="optional" style="min-width:120px" /></td>
+      <td style="white-space:nowrap"><input value="${esc(v.img||'')}" data-f="img" placeholder="optional" style="min-width:100px;max-width:140px" /> <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" onclick="pickPhoto(${v.id})">📷 Upload</button></td>
       <td><span class="avail-toggle" onclick="toggleAvail(this, ${v.id}, ${v.avail})"><span class="dot ${v.avail?'on':''}"></span>${v.avail?'Available':'Sold out'}</span></td>
       <td style="white-space:nowrap"><button class="btn btn-green" onclick="saveRow(this,'fleet')">Save</button> <button class="btn btn-red" onclick="delRow(this,'fleet')">✕</button></td>
     </tr>`).join('');
@@ -259,6 +259,50 @@ async function delRow(btn, table){
     await api(`/rest/v1/${table}?id=eq.${id}`, { method:'DELETE' });
     btn.closest('tr').remove(); toast('Deleted');
   }catch(e){ toast('Error: ' + e.message, true); }
+}
+
+/* ============ photo upload (Supabase Storage) ============ */
+const photoInput = document.createElement('input');
+photoInput.type = 'file'; photoInput.accept = 'image/*'; photoInput.style.display = 'none';
+document.body.appendChild(photoInput);
+let photoTargetId = null;
+
+function pickPhoto(id){ photoTargetId = id; photoInput.value = ''; photoInput.click(); }
+
+photoInput.onchange = async () => {
+  const file = photoInput.files[0];
+  if(!file || !photoTargetId) return;
+  toast('Uploading photo…');
+  try{
+    const blob = await compressImage(file, 900, 0.82);
+    const name = `car-${photoTargetId}-${Date.now()}.jpg`;
+    const up = await fetch(`${SUPABASE_URL}/storage/v1/object/cars/${name}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' },
+      body: blob
+    });
+    if(!up.ok) throw new Error(await up.text());
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/cars/${name}`;
+    await api(`/rest/v1/fleet?id=eq.${photoTargetId}`, { method:'PATCH', body: JSON.stringify({ img: publicUrl }) });
+    toast('Photo saved ✓'); loadFleet();
+  }catch(e){ toast('Upload failed: ' + e.message.slice(0,80), true); }
+};
+
+// shrink large phone photos to max 900px wide JPEG so the site stays fast
+function compressImage(file, maxW, quality){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('compress failed')), 'image/jpeg', quality);
+    };
+    img.onerror = () => reject(new Error('could not read image'));
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 /* auto-login if session token exists */
