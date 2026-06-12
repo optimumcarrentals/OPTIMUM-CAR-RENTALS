@@ -278,7 +278,7 @@
   </div>
   <div class="hero-stats">
     <div class="s"><b>8+</b><span>YEARS SERVING THE GTA</span></div>
-    <div class="s"><b>24/7</b><span>ROADSIDE SUPPORT</span></div>
+    <div class="s"><b>Free</b><span>CANCELLATION BEFORE PICKUP</span></div>
   </div>
 </div></section>
 
@@ -583,7 +583,7 @@ function renderGrid(){
         <span class="tag">${v.cls}</span>
         ${statusTag}
         ${art(v.cls)}
-        <img class="carimg" src="${v.img || 'cars/'+slug(v.name)+'.jpg'}" alt="${v.name}" loading="lazy" onerror="this.remove()">
+        ${v.img ? `<img class="carimg" src="${v.img}" alt="${v.name}" loading="lazy" onerror="this.remove()">` : ''}
       </div>
       <div class="body">
         <h3>${v.name} <span class="sim">or similar — ${v.cls} class</span></h3>
