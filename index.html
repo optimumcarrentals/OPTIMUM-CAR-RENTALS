@@ -716,8 +716,8 @@ function closeBooking(){overlay.classList.remove('open');}
 overlay.addEventListener('click',e=>{if(e.target===overlay)closeBooking();});
 
 // ===== EMAIL SETUP =====
-// Web3Forms sends every reservation to reservations@optimumcarrentals.ca.
-// The customer automatically receives a copy at the email they enter (ccemail).
+// Web3Forms sends every reservation to the inbox tied to your access key.
+// The customer also gets their own copy (a second send to their address).
 const FORM_ACCESS_KEY = "f3a9ca93-8828-4a0f-ad64-8a7d1ccc8d37";
 
 async function submitBooking(){
@@ -754,29 +754,47 @@ async function submitBooking(){
   // email the reservation to the business + a copy to the customer
   const submitBtn=document.getElementById('submitBtn');
   submitBtn.disabled=true; submitBtn.textContent="Sending…";
+  // honeypot check done in JS (don't send botcheck to Web3Forms — it silently drops valid sends)
   if(FORM_ACCESS_KEY && !FORM_ACCESS_KEY.startsWith("PASTE")){
-    const payload={
-      access_key: FORM_ACCESS_KEY,
-      subject: "Reservation request — "+(current?current.name:'Any vehicle')+" — "+g('f-name'),
-      from_name: "Optimum Car Rentals",
-      replyto: g('f-email')||undefined,
-      ccemail: g('f-email')||undefined,   // customer receives a copy
-      botcheck: g('f-website'),           // Web3Forms drops submissions where this is filled
-      message:
-        "RESERVATION REQUEST — OPTIMUM CAR RENTALS\n"+
-        "------------------------------------------\n"+
-        rows.map(r=>r[0]+": "+r[1]).join("\n")+
-        "\n------------------------------------------\n"+
-        "Optimum Car Rentals · 11 Belfield Rd, Toronto · (416) 241-7656\n"+
-        "This is a request — we will contact you to confirm availability."
-    };
+    const messageBody=
+      "RESERVATION REQUEST — OPTIMUM CAR RENTALS\n"+
+      "------------------------------------------\n"+
+      rows.map(r=>r[0]+": "+r[1]).join("\n")+
+      "\n------------------------------------------\n"+
+      "Optimum Car Rentals · 11 Belfield Rd, Toronto · (416) 241-7656\n"+
+      "This is a request — we will contact you to confirm availability.";
+
+    // 1) send to the business
     try{
       await fetch("https://api.web3forms.com/submit",{
         method:"POST",
         headers:{"Content-Type":"application/json", Accept:"application/json"},
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          access_key: FORM_ACCESS_KEY,
+          subject: "Reservation request — "+(current?current.name:'Any vehicle')+" — "+g('f-name'),
+          from_name: "Optimum Car Rentals",
+          replyto: g('f-email')||undefined,
+          message: messageBody
+        })
       });
     }catch(e){ /* still show confirmation even if send fails */ }
+
+    // 2) send a separate copy to the customer (reliable on free plan, unlike ccemail)
+    if(g('f-email')){
+      try{
+        await fetch("https://api.web3forms.com/submit",{
+          method:"POST",
+          headers:{"Content-Type":"application/json", Accept:"application/json"},
+          body: JSON.stringify({
+            access_key: FORM_ACCESS_KEY,
+            subject: "Your reservation request — Optimum Car Rentals",
+            from_name: "Optimum Car Rentals",
+            to: g('f-email'),
+            message: "Hi "+g('f-name').split(' ')[0]+",\n\nThanks for your reservation request — here's a copy for your records. We'll contact you shortly to confirm availability.\n\n"+messageBody
+          })
+        });
+      }catch(e){ /* customer copy is best-effort */ }
+    }
   }
 
   document.getElementById('m-body').innerHTML=`
