@@ -10,7 +10,7 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://optimumcarrentals.ca" />
 <meta name="theme-color" content="#0e0e11" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.web3forms.com https://*.supabase.co; object-src 'none'; frame-src https://www.google.com; base-uri 'self'; form-action 'self' https://api.web3forms.com" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.emailjs.com https://*.supabase.co; object-src 'none'; frame-src https://www.google.com; base-uri 'self'; form-action 'self'" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230e0e11'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' font-style='italic' fill='%23ff7700' text-anchor='middle'>O</text></svg>" />
 <script type="application/ld+json">
@@ -716,9 +716,13 @@ function closeBooking(){overlay.classList.remove('open');}
 overlay.addEventListener('click',e=>{if(e.target===overlay)closeBooking();});
 
 // ===== EMAIL SETUP =====
-// Web3Forms sends every reservation to the inbox tied to your access key.
-// The customer also gets their own copy (a second send to their address).
-const FORM_ACCESS_KEY = "4f47e9cb-c48b-49ea-8a64-9d33464fcd20";
+// EmailJS sends two emails per booking: business copy + customer copy.
+// ===== EMAIL SETUP (EmailJS) =====
+// Sends two emails per booking: one to the business, one to the customer.
+const EMAILJS_PUBLIC_KEY   = "fgdicyHdwiVaaG1VB";
+const EMAILJS_SERVICE_ID   = "service_m08mkp6";
+const EMAILJS_TPL_INTERNAL = "template_6w25b18";   // To: optimumcarrentals@gmail.com
+const EMAILJS_TPL_CUSTOMER = "template_gpvs15q";   // To: {{to_email}}
 
 async function submitBooking(){
   const g=id=>document.getElementById(id).value.trim();
@@ -730,12 +734,14 @@ async function submitBooking(){
   if(g('f-email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g('f-email'))){alert("That email address doesn't look right — please double-check it.");return;}
   if(g('f-pickup') && g('f-return') && g('f-return')<g('f-pickup')){alert("The return date can't be before the pickup date.");return;}
 
-  // nicely capitalize the first name regardless of how it was typed
-  const firstName = (g('f-name').split(' ')[0]||'there').replace(/^./, ch => ch.toUpperCase());
+  // normalize the name to Title Case (handles ALL CAPS or lowercase input)
+  const titleCase = s => s.toLowerCase().replace(/\b\w/g, ch => ch.toUpperCase());
+  const cleanName = titleCase(g('f-name'));
+  const firstName = (cleanName.split(' ')[0]||'there');
 
   const rows=[
     ['Vehicle', current?current.name+' or similar':'Any available'],
-    ['Name', g('f-name')], ['Phone', g('f-phone')], ['Email', g('f-email')||'—'],
+    ['Name', cleanName], ['Phone', g('f-phone')], ['Email', g('f-email')||'—'],
     ['Pickup', g('f-pickup')||'—'], ['Return', g('f-return')||'—'],
   ];
   if(current) rows.push(['Daily rate','$'+current.rate+' CAD']);
@@ -752,75 +758,77 @@ async function submitBooking(){
   }
   if(g('f-notes')) rows.push(['Requests', g('f-notes')]);
 
-  // email the reservation to the business + a copy to the customer
+  // email the reservation to the business + a copy to the customer (via EmailJS)
   const submitBtn=document.getElementById('submitBtn');
   submitBtn.disabled=true; submitBtn.textContent="Sending…";
-  // honeypot check done in JS (don't send botcheck to Web3Forms — it silently drops valid sends)
-  if(FORM_ACCESS_KEY && !FORM_ACCESS_KEY.startsWith("PASTE")){
 
-    // ---- message for the BUSINESS (full internal detail) ----
-    const businessMsg=
-      "RESERVATION REQUEST — OPTIMUM CAR RENTALS\n"+
-      "------------------------------------------\n"+
-      rows.map(r=>r[0]+": "+r[1]).join("\n")+
-      "\n------------------------------------------\n"+
-      "Included: 200 km/day (up to 3,000 km/month), $0.18/km after\n"+
-      "At pickup: licence, credit card, 2nd photo ID — $500 deposit pre-authorized\n"+
-      "ACTION: call/email the customer to confirm availability.";
+  // ---- message for the BUSINESS (full internal detail) ----
+  const businessMsg=
+    "RESERVATION REQUEST — OPTIMUM CAR RENTALS\n"+
+    "------------------------------------------\n"+
+    rows.map(r=>r[0]+": "+r[1]).join("\n")+
+    "\n------------------------------------------\n"+
+    "Included: 200 km/day (up to 3,000 km/month), $0.18/km after\n"+
+    "At pickup: licence, credit card, 2nd photo ID — $500 deposit pre-authorized\n"+
+    "ACTION: call/email the customer to confirm availability.";
 
-    // ---- message for the CUSTOMER (warm, no internal labels) ----
-    const customerRows = rows.filter(r => !['Subtotal / day','HST (13%)'].includes(r[0]));
-    const customerMsg=
-      "Hi "+firstName+",\n\n"+
-      "Thank you for your reservation request with Optimum Car Rentals. "+
-      "We've received the details below and our team will contact you shortly to confirm availability.\n\n"+
-      "YOUR REQUEST\n"+
-      "------------------------------------------\n"+
-      customerRows.map(r=>r[0]+": "+r[1]).join("\n")+
-      "\n------------------------------------------\n\n"+
-      "What to bring to pickup:\n"+
-      "• Valid driver's licence\n"+
-      "• A credit card in your name (a $500 deposit is pre-authorized and released at return)\n"+
-      "• A second piece of photo ID\n\n"+
-      "Good to know: every rental includes 200 km/day (up to 3,000 km/month); additional distance is $0.18/km. "+
-      "Prices shown are estimates before final confirmation.\n\n"+
-      "Questions or changes? Just reply to this email or call us at (416) 241-7656.\n\n"+
-      "We look forward to getting you on the road.\n\n"+
-      "Optimum Car Rentals\n"+
-      "11 Belfield Rd, Unit B, Toronto, ON M9W 1E8\n"+
-      "(416) 241-7656 · optimumcarrentals.ca";
+  // ---- message for the CUSTOMER (warm, no internal labels) ----
+  const customerRows = rows.filter(r => !['Subtotal / day','HST (13%)'].includes(r[0]));
+  const customerMsg=
+    "Hi "+firstName+",\n\n"+
+    "Thank you for your reservation request with Optimum Car Rentals. "+
+    "We've received the details below and our team will contact you shortly to confirm availability.\n\n"+
+    "YOUR REQUEST\n"+
+    "------------------------------------------\n"+
+    customerRows.map(r=>r[0]+": "+r[1]).join("\n")+
+    "\n------------------------------------------\n\n"+
+    "What to bring to pickup:\n"+
+    "• Valid driver's licence\n"+
+    "• A credit card in your name (a $500 deposit is pre-authorized and released at return)\n"+
+    "• A second piece of photo ID\n\n"+
+    "Good to know: every rental includes 200 km/day (up to 3,000 km/month); additional distance is $0.18/km. "+
+    "Prices shown are estimates before final confirmation.\n\n"+
+    "Questions or changes? Just reply to this email or call us at (416) 241-7656.\n\n"+
+    "We look forward to getting you on the road.\n\n"+
+    "Optimum Car Rentals\n"+
+    "11 Belfield Rd, Unit B, Toronto, ON M9W 1E8\n"+
+    "(416) 241-7656 · optimumcarrentals.ca";
 
-    // 1) send to the business
+  async function sendEmail(templateId, params){
+    return fetch("https://api.emailjs.com/api/v1.0/email/send",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        service_id: EMAILJS_SERVICE_ID,
+        template_id: templateId,
+        user_id: EMAILJS_PUBLIC_KEY,
+        template_params: params
+      })
+    });
+  }
+
+  // 1) business copy
+  try{
+    await sendEmail(EMAILJS_TPL_INTERNAL, {
+      message: businessMsg,
+      name: cleanName,
+      email: g('f-email')||'no-email-provided',
+      reply_to: g('f-email')||'',
+      to_email: "optimumcarrentals@gmail.com"
+    });
+  }catch(e){ /* still show confirmation even if send fails */ }
+
+  // 2) customer copy (only if they gave an email)
+  if(g('f-email')){
     try{
-      await fetch("https://api.web3forms.com/submit",{
-        method:"POST",
-        headers:{"Content-Type":"application/json", Accept:"application/json"},
-        body: JSON.stringify({
-          access_key: FORM_ACCESS_KEY,
-          subject: "New reservation — "+(current?current.name:'Any vehicle')+" — "+g('f-name'),
-          from_name: "Optimum Website",
-          replyto: g('f-email')||undefined,
-          message: businessMsg
-        })
+      await sendEmail(EMAILJS_TPL_CUSTOMER, {
+        message: customerMsg,
+        name: cleanName,
+        email: g('f-email'),
+        reply_to: g('f-email'),
+        to_email: g('f-email')
       });
-    }catch(e){ /* still show confirmation even if send fails */ }
-
-    // 2) send a separate, customer-friendly copy to the customer
-    if(g('f-email')){
-      try{
-        await fetch("https://api.web3forms.com/submit",{
-          method:"POST",
-          headers:{"Content-Type":"application/json", Accept:"application/json"},
-          body: JSON.stringify({
-            access_key: FORM_ACCESS_KEY,
-            subject: "We received your reservation request — Optimum Car Rentals",
-            from_name: "Optimum Car Rentals",
-            to: g('f-email'),
-            message: customerMsg
-          })
-        });
-      }catch(e){ /* customer copy is best-effort */ }
-    }
+    }catch(e){ /* customer copy is best-effort */ }
   }
 
   document.getElementById('m-body').innerHTML=`
