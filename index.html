@@ -730,6 +730,9 @@ async function submitBooking(){
   if(g('f-email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g('f-email'))){alert("That email address doesn't look right — please double-check it.");return;}
   if(g('f-pickup') && g('f-return') && g('f-return')<g('f-pickup')){alert("The return date can't be before the pickup date.");return;}
 
+  // nicely capitalize the first name regardless of how it was typed
+  const firstName = (g('f-name').split(' ')[0]||'there').replace(/^./, ch => ch.toUpperCase());
+
   const rows=[
     ['Vehicle', current?current.name+' or similar':'Any available'],
     ['Name', g('f-name')], ['Phone', g('f-phone')], ['Email', g('f-email')||'—'],
@@ -745,24 +748,47 @@ async function submitBooking(){
     const sub=current.rate+c.rate+addonsTotal(), hst=sub*0.13;
     rows.push(['Subtotal / day','$'+sub.toFixed(2)]);
     rows.push(['HST (13%)','$'+hst.toFixed(2)]);
-    rows.push(['Daily total','$'+(sub+hst).toFixed(2)+' CAD']);
+    rows.push(['Estimated daily total','$'+(sub+hst).toFixed(2)+' CAD']);
   }
   if(g('f-notes')) rows.push(['Requests', g('f-notes')]);
-  rows.push(['Included','200 km/day (up to 3,000 km/month), $0.18/km after']);
-  rows.push(['Bring to pickup','Licence, credit card, 2nd photo ID — $500 deposit pre-authorized']);
 
   // email the reservation to the business + a copy to the customer
   const submitBtn=document.getElementById('submitBtn');
   submitBtn.disabled=true; submitBtn.textContent="Sending…";
   // honeypot check done in JS (don't send botcheck to Web3Forms — it silently drops valid sends)
   if(FORM_ACCESS_KEY && !FORM_ACCESS_KEY.startsWith("PASTE")){
-    const messageBody=
+
+    // ---- message for the BUSINESS (full internal detail) ----
+    const businessMsg=
       "RESERVATION REQUEST — OPTIMUM CAR RENTALS\n"+
       "------------------------------------------\n"+
       rows.map(r=>r[0]+": "+r[1]).join("\n")+
       "\n------------------------------------------\n"+
-      "Optimum Car Rentals · 11 Belfield Rd, Toronto · (416) 241-7656\n"+
-      "This is a request — we will contact you to confirm availability.";
+      "Included: 200 km/day (up to 3,000 km/month), $0.18/km after\n"+
+      "At pickup: licence, credit card, 2nd photo ID — $500 deposit pre-authorized\n"+
+      "ACTION: call/email the customer to confirm availability.";
+
+    // ---- message for the CUSTOMER (warm, no internal labels) ----
+    const customerRows = rows.filter(r => !['Subtotal / day','HST (13%)'].includes(r[0]));
+    const customerMsg=
+      "Hi "+firstName+",\n\n"+
+      "Thank you for your reservation request with Optimum Car Rentals. "+
+      "We've received the details below and our team will contact you shortly to confirm availability.\n\n"+
+      "YOUR REQUEST\n"+
+      "------------------------------------------\n"+
+      customerRows.map(r=>r[0]+": "+r[1]).join("\n")+
+      "\n------------------------------------------\n\n"+
+      "What to bring to pickup:\n"+
+      "• Valid driver's licence\n"+
+      "• A credit card in your name (a $500 deposit is pre-authorized and released at return)\n"+
+      "• A second piece of photo ID\n\n"+
+      "Good to know: every rental includes 200 km/day (up to 3,000 km/month); additional distance is $0.18/km. "+
+      "Prices shown are estimates before final confirmation.\n\n"+
+      "Questions or changes? Just reply to this email or call us at (416) 241-7656.\n\n"+
+      "We look forward to getting you on the road.\n\n"+
+      "Optimum Car Rentals\n"+
+      "11 Belfield Rd, Unit B, Toronto, ON M9W 1E8\n"+
+      "(416) 241-7656 · optimumcarrentals.ca";
 
     // 1) send to the business
     try{
@@ -771,15 +797,15 @@ async function submitBooking(){
         headers:{"Content-Type":"application/json", Accept:"application/json"},
         body: JSON.stringify({
           access_key: FORM_ACCESS_KEY,
-          subject: "Reservation request — "+(current?current.name:'Any vehicle')+" — "+g('f-name'),
-          from_name: "Optimum Car Rentals",
+          subject: "New reservation — "+(current?current.name:'Any vehicle')+" — "+g('f-name'),
+          from_name: "Optimum Website",
           replyto: g('f-email')||undefined,
-          message: messageBody
+          message: businessMsg
         })
       });
     }catch(e){ /* still show confirmation even if send fails */ }
 
-    // 2) send a separate copy to the customer (reliable on free plan, unlike ccemail)
+    // 2) send a separate, customer-friendly copy to the customer
     if(g('f-email')){
       try{
         await fetch("https://api.web3forms.com/submit",{
@@ -787,10 +813,10 @@ async function submitBooking(){
           headers:{"Content-Type":"application/json", Accept:"application/json"},
           body: JSON.stringify({
             access_key: FORM_ACCESS_KEY,
-            subject: "Your reservation request — Optimum Car Rentals",
+            subject: "We received your reservation request — Optimum Car Rentals",
             from_name: "Optimum Car Rentals",
             to: g('f-email'),
-            message: "Hi "+g('f-name').split(' ')[0]+",\n\nThanks for your reservation request — here's a copy for your records. We'll contact you shortly to confirm availability.\n\n"+messageBody
+            message: customerMsg
           })
         });
       }catch(e){ /* customer copy is best-effort */ }
