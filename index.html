@@ -813,9 +813,7 @@ async function submitBooking(){
   try{
     await sendEmail(EMAILJS_TPL_INTERNAL, {
       message: businessMsg,
-      name: cleanName,
-      time: nowStr,
-      email: g('f-email')||'optimumcarrentals@gmail.com'
+      email: g('f-email') || 'optimumcarrentals@gmail.com'
     });
   }catch(e){ /* still show confirmation even if send fails */ }
 
@@ -824,8 +822,6 @@ async function submitBooking(){
     try{
       await sendEmail(EMAILJS_TPL_CUSTOMER, {
         message: customerMsg,
-        name: cleanName,
-        time: nowStr,
         email: g('f-email')
       });
     }catch(e){ /* customer copy is best-effort */ }
