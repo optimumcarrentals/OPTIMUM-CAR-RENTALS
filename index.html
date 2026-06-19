@@ -721,8 +721,8 @@ overlay.addEventListener('click',e=>{if(e.target===overlay)closeBooking();});
 // Sends two emails per booking: one to the business, one to the customer.
 const EMAILJS_PUBLIC_KEY   = "fgdicyHdwiVaaG1VB";
 const EMAILJS_SERVICE_ID   = "service_m08mkp6";
-const EMAILJS_TPL_INTERNAL = "template_6w25b18";   // To: optimumcarrentals@gmail.com
-const EMAILJS_TPL_CUSTOMER = "template_gpvs15q";   // To: {{to_email}}
+const EMAILJS_TPL_INTERNAL = "template_w1llnfd";   // To: optimumcarrentals@gmail.com
+const EMAILJS_TPL_CUSTOMER = "template_e4gdpj4";   // To: {{email}}
 
 async function submitBooking(){
   const g=id=>document.getElementById(id).value.trim();
@@ -807,26 +807,26 @@ async function submitBooking(){
     });
   }
 
-  // 1) business copy
+  const nowStr = new Date().toLocaleString('en-CA');
+
+  // 1) business copy → internal template (To: fixed gmail, Reply-To: {{email}})
   try{
     await sendEmail(EMAILJS_TPL_INTERNAL, {
       message: businessMsg,
       name: cleanName,
-      email: g('f-email')||'no-email-provided',
-      reply_to: g('f-email')||'',
-      to_email: "optimumcarrentals@gmail.com"
+      time: nowStr,
+      email: g('f-email')||'optimumcarrentals@gmail.com'
     });
   }catch(e){ /* still show confirmation even if send fails */ }
 
-  // 2) customer copy (only if they gave an email)
+  // 2) customer copy → customer template (To: {{email}})
   if(g('f-email')){
     try{
       await sendEmail(EMAILJS_TPL_CUSTOMER, {
         message: customerMsg,
         name: cleanName,
-        email: g('f-email'),
-        reply_to: g('f-email'),
-        to_email: g('f-email')
+        time: nowStr,
+        email: g('f-email')
       });
     }catch(e){ /* customer copy is best-effort */ }
   }
