@@ -30,12 +30,20 @@
     "postalCode": "M9W 1E8",
     "addressCountry": "CA"
   },
-  "openingHoursSpecification": {
-    "@type": "OpeningHoursSpecification",
-    "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
-    "opens": "10:00",
-    "closes": "19:00"
-  }
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+      "opens": "09:00",
+      "closes": "18:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Saturday","Sunday"],
+      "opens": "10:00",
+      "closes": "16:00"
+    }
+  ]
 }
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -249,7 +257,7 @@
 
 <!-- TOP BAR -->
 <div class="topbar"><div class="wrap">
-  <span class="addr">11 Belfield Rd, Toronto, ON M9W 1E8 · near Pearson Airport · Mon–Fri 10am–7pm</span>
+  <span class="addr">11 Belfield Rd, Toronto, ON M9W 1E8 · near Pearson Airport · Mon–Fri 9am–6pm · Sat–Sun 10am–4pm</span>
   <a class="phone" href="tel:+14162417656">📞 (416) 241-7656</a>
 </div></div>
 
@@ -410,7 +418,7 @@
       <p><b>Phone:</b> (416) 241-7656</p>
       <p><b>Reservations:</b> reservations@optimumcarrentals.ca</p>
       <p><b>Billing:</b> billing@optimumcarrentals.ca</p>
-      <p><b>Hours:</b> Mon–Fri 10am–7pm · Sat & Sun closed</p>
+      <p><b>Hours:</b> Mon–Fri 9am–6pm · Sat & Sun 10am–4pm</p>
       <button class="btn btn-orange" style="margin-top:14px" onclick="openBooking()">Reserve a Vehicle</button>
     </div>
     <div class="map"><iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=11+Belfield+Road,+Etobicoke,+ON+M9W+1E8&output=embed"></iframe></div>
@@ -435,7 +443,7 @@
         <a href="tel:+14162417656">(416) 241-7656</a>
         <a href="mailto:reservations@optimumcarrentals.ca">reservations@optimumcarrentals.ca</a>
         <span>11 Belfield Rd, Unit B, Toronto, ON M9W 1E8</span>
-        <span>Mon–Fri 10am–7pm · Sat & Sun closed</span>
+        <span>Mon–Fri 9am–6pm · Sat & Sun 10am–4pm</span>
       </div>
     </div>
   </div>
@@ -467,9 +475,12 @@
         <div class="cov-head">Add damage protection <span>(optional)</span></div>
         <div id="covOpts"></div>
         <div class="cov-total" id="covBreakdown">
+          <div class="cov-row"><span>VLF & maintenance fee</span><span>$2.99 / day</span></div>
           <div class="cov-row"><span>Subtotal / day</span><span id="covSub">—</span></div>
           <div class="cov-row"><span>HST (13%)</span><span id="covHst">—</span></div>
           <div class="cov-row cov-grand"><span>Daily total</span><b id="covTotal">—</b></div>
+          <div class="cov-row" id="tripDaysRow" style="display:none"><span id="tripDaysLabel">Rental length</span><span id="tripDays">—</span></div>
+          <div class="cov-row cov-grand" id="tripTotalRow" style="display:none"><span>Trip total (incl. HST)</span><b id="tripTotal">—</b></div>
         </div>
       </div>
 
@@ -480,8 +491,13 @@
       </div>
       <div class="row2">
         <div class="field"><label>Pickup date</label><input id="f-pickup" type="date" /></div>
-        <div class="field"><label>Return date</label><input id="f-return" type="date" /></div>
+        <div class="field"><label>Pickup time</label><select id="f-pickup-time"><option value="">Select date first</option></select></div>
       </div>
+      <div class="row2">
+        <div class="field"><label>Return date</label><input id="f-return" type="date" /></div>
+        <div class="field"><label>Return time</label><select id="f-return-time"><option value="">Select date first</option></select></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 14px">Pickup & return during business hours: Mon–Fri 9am–6pm · Sat–Sun 10am–4pm. Rentals are billed in 24-hour days.</p>
       <div class="field"><label>Special requests <span style="font-weight:400;opacity:.7">(optional)</span></label><input id="f-notes" maxlength="200" placeholder="e.g. after-hours pickup, winter tires" /></div>
       <!-- honeypot: invisible to humans, bots fill it and get silently dropped -->
       <input id="f-website" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;height:0;width:0;opacity:0" aria-hidden="true" />
@@ -689,13 +705,62 @@ function renderCoverage(){
     </div>`).join('');
   [...box.children].forEach(el=>el.onclick=()=>{coverage=el.dataset.id;renderCoverage();updateCovTotal();});
 }
+/* ---- mandatory fees (per day, applied to every rental) ---- */
+const VLF_MAINT_FEE = 2.99;   // Vehicle Licensing & Maintenance fee
+
+/* ---- business hours & rental-day math ---- */
+// Mon–Fri 9:00–18:00 · Sat–Sun 10:00–16:00
+function hoursFor(dateStr){
+  const d=new Date(dateStr+'T12:00:00');
+  const wknd=(d.getDay()===0||d.getDay()===6);
+  return wknd?{open:10,close:16}:{open:9,close:18};
+}
+function fmt12(h,m){const ap=h>=12?'PM':'AM';let hh=h%12;if(hh===0)hh=12;return hh+':' + (m===0?'00':m)+' '+ap;}
+function fillTimeSlots(dateInputId, timeSelectId){
+  const dateVal=document.getElementById(dateInputId).value;
+  const sel=document.getElementById(timeSelectId);
+  const prev=sel.value;
+  if(!dateVal){sel.innerHTML='<option value="">Select date first</option>';return;}
+  const {open,close}=hoursFor(dateVal);
+  let opts='';
+  for(let h=open;h<=close;h++){
+    for(const m of [0,30]){
+      if(h===close&&m>0)continue;
+      const v=(h<10?'0':'')+h+':'+(m===0?'00':'30');
+      opts+=`<option value="${v}">${fmt12(h,m)}</option>`;
+    }
+  }
+  sel.innerHTML=opts;
+  if([...sel.options].some(o=>o.value===prev)) sel.value=prev;
+}
+// 24-hour billing: 1–24h = 1 day, 24h01m–48h = 2 days, etc.
+function rentalDays(){
+  const pd=document.getElementById('f-pickup').value, pt=document.getElementById('f-pickup-time').value;
+  const rd=document.getElementById('f-return').value, rt=document.getElementById('f-return-time').value;
+  if(!pd||!rd||!pt||!rt) return null;
+  const start=new Date(pd+'T'+pt+':00'), end=new Date(rd+'T'+rt+':00');
+  const hrs=(end-start)/36e5;
+  if(hrs<=0) return null;
+  return Math.max(1, Math.ceil(hrs/24));
+}
 function updateCovTotal(){
   const base=current?current.rate:0;
-  const sub=base+covObj().rate+addonsTotal();
+  const sub=base+covObj().rate+addonsTotal()+(current?VLF_MAINT_FEE:0);
   const hst=sub*0.13;
+  const daily=sub+hst;
   document.getElementById('covSub').textContent='$'+sub.toFixed(2);
   document.getElementById('covHst').textContent='$'+hst.toFixed(2);
-  document.getElementById('covTotal').textContent='$'+(sub+hst).toFixed(2);
+  document.getElementById('covTotal').textContent='$'+daily.toFixed(2);
+  // trip total when dates+times are chosen
+  const days=rentalDays();
+  const dr=document.getElementById('tripDaysRow'), tr=document.getElementById('tripTotalRow');
+  if(days && current){
+    document.getElementById('tripDays').textContent=days+(days===1?' day':' days');
+    document.getElementById('tripTotal').textContent='$'+(daily*days).toFixed(2)+' CAD';
+    dr.style.display=''; tr.style.display='';
+  }else{
+    dr.style.display='none'; tr.style.display='none';
+  }
 }
 
 function openBooking(vehicle=null){
@@ -708,8 +773,12 @@ function openBooking(vehicle=null){
   // dates: block the past, default return to pickup+1
   const today=new Date().toISOString().split('T')[0];
   const pk=document.getElementById('f-pickup'), rt=document.getElementById('f-return');
+  const pkT=document.getElementById('f-pickup-time'), rtT=document.getElementById('f-return-time');
   pk.min=today; rt.min=today;
-  pk.onchange=()=>{ rt.min=pk.value; if(rt.value && rt.value<pk.value) rt.value=pk.value; };
+  pk.onchange=()=>{ rt.min=pk.value; if(rt.value && rt.value<pk.value) rt.value=pk.value; fillTimeSlots('f-pickup','f-pickup-time'); fillTimeSlots('f-return','f-return-time'); updateCovTotal(); };
+  rt.onchange=()=>{ fillTimeSlots('f-return','f-return-time'); updateCovTotal(); };
+  pkT.onchange=updateCovTotal; rtT.onchange=updateCovTotal;
+  fillTimeSlots('f-pickup','f-pickup-time'); fillTimeSlots('f-return','f-return-time');
   overlay.classList.add('open');
 }
 function closeBooking(){overlay.classList.remove('open');}
@@ -732,29 +801,40 @@ async function submitBooking(){
   if(g('f-website')){return;}
   if(!g('f-name')||!g('f-phone')){alert("Please add your name and phone number so we can confirm your reservation.");return;}
   if(g('f-email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g('f-email'))){alert("That email address doesn't look right — please double-check it.");return;}
-  if(g('f-pickup') && g('f-return') && g('f-return')<g('f-pickup')){alert("The return date can't be before the pickup date.");return;}
+  if(g('f-pickup') && !g('f-pickup-time')){alert("Please choose a pickup time.");return;}
+  if(g('f-return') && !g('f-return-time')){alert("Please choose a return time.");return;}
+  if(g('f-pickup') && g('f-return') && g('f-pickup-time') && g('f-return-time')){
+    const s=new Date(g('f-pickup')+'T'+g('f-pickup-time')+':00'), e=new Date(g('f-return')+'T'+g('f-return-time')+':00');
+    if(e<=s){alert("The return date & time must be after the pickup date & time.");return;}
+  }
 
   // normalize the name to Title Case (handles ALL CAPS or lowercase input)
   const titleCase = s => s.toLowerCase().replace(/\b\w/g, ch => ch.toUpperCase());
   const cleanName = titleCase(g('f-name'));
   const firstName = (cleanName.split(' ')[0]||'there');
 
+  const days = rentalDays();
+  const t12 = v => { if(!v) return ''; const [h,m]=v.split(':').map(Number); return fmt12(h,m); };
   const rows=[
     ['Vehicle', current?current.name+' or similar':'Any available'],
     ['Name', cleanName], ['Phone', g('f-phone')], ['Email', g('f-email')||'—'],
-    ['Pickup', g('f-pickup')||'—'], ['Return', g('f-return')||'—'],
+    ['Pickup', (g('f-pickup')||'—') + (g('f-pickup-time')?' at '+t12(g('f-pickup-time')):'')],
+    ['Return', (g('f-return')||'—') + (g('f-return-time')?' at '+t12(g('f-return-time')):'')],
   ];
+  if(days) rows.push(['Rental length', days+(days===1?' day':' days')+' (billed in 24-hour days)']);
   if(current) rows.push(['Daily rate','$'+current.rate+' CAD']);
   const c=covObj();
   rows.push(['Protection', c.label + (c.ded ? (' — $'+c.ded+' deductible') : '')]);
   if(c.rate) rows.push(['Protection rate','$'+c.rate.toFixed(2)+'/day']);
   const picked=ADDONS.filter(a=>addonsSel.has(a.id));
   if(picked.length) rows.push(['Extras', picked.map(a=>a.label+' ($'+a.rate.toFixed(2)+'/day)').join(', ')]);
+  rows.push(['VLF & maintenance fee','$'+VLF_MAINT_FEE.toFixed(2)+'/day (applies to all rentals)']);
   if(current){
-    const sub=current.rate+c.rate+addonsTotal(), hst=sub*0.13;
+    const sub=current.rate+c.rate+addonsTotal()+VLF_MAINT_FEE, hst=sub*0.13;
     rows.push(['Subtotal / day','$'+sub.toFixed(2)]);
     rows.push(['HST (13%)','$'+hst.toFixed(2)]);
     rows.push(['Estimated daily total','$'+(sub+hst).toFixed(2)+' CAD']);
+    if(days) rows.push(['Estimated trip total', days+' × $'+(sub+hst).toFixed(2)+' = $'+((sub+hst)*days).toFixed(2)+' CAD']);
   }
   if(g('f-notes')) rows.push(['Requests', g('f-notes')]);
 
